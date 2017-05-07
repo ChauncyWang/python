@@ -5,6 +5,7 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="src.test1.A" />
+          <option value="base" />
         </list>
       </option>
     </inspection_tool>
