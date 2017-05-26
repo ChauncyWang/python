@@ -10,11 +10,5 @@ for l in list:
     id = re.findall("id\W*=\W*(\w*)", file)
     name = re.findall("name\W*=\W*(\w*)", file)
     manpower = re.findall("manpower\W*=\W*(\w*)", file)
-    province = re.findall("provinces\W*=\W*\{\W*(.*?)\W*\}",file)
-    for p in province[0].split(" "):
-        if p != "":
-            provinces.append(int(p))
-
-provinces.sort()
-print(provinces)
-print(len(provinces))
+    province = re.findall("provinces\W*=\W*{\W*(.*?)\W*\}", file)
+    print(province)
