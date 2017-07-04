@@ -1,8 +1,6 @@
-import wechat
 from wechat.services import login
-import pyqrcode
 
-login.getQR(login.getQRuuid())
-f = open("QR.png","rb")
-e = pyqrcode.QRCode().png("QR.png")
-print(e)
+
+l = login.Login()
+l.login()
+print(l.redirect_uri)
