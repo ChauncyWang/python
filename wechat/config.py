@@ -6,6 +6,7 @@ AI_URL = "http://www.tuling123.com/openapi/api"
 AI_KEY = "2c99438750044099b0b53bc859c0e32b"
 
 # 微信相关
-WX_URL = "login.weixin.qq.com"
-API_jsLogin = "https://" + WX_URL + "/jslogin"
-API_login = "https://" + WX_URL + "/cgi-bin/mmwebwx-bin/login"
+WX_URL = "https://login.weixin.qq.com"
+API_jsLogin = WX_URL + "/jslogin"
+API_login = WX_URL + "/cgi-bin/mmwebwx-bin/login"
+API_web_init = "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxinit"

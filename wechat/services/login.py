@@ -1,3 +1,4 @@
+import json
 import re
 
 import pyqrcode
@@ -6,16 +7,16 @@ import time
 import wechat
 from wechat import config
 
-from xml.dom.minidom import parseString as ps
+import xml.dom.minidom as dom
+
 
 class Login:
     """
     登录类，登录的相关操作
     """
-
     def __init__(self):
         self.uuid = None
-        self.redirect_uri = None
+        self.login_info = {}
         self.session = wechat.session
 
     def login(self):
@@ -30,12 +31,12 @@ class Login:
             t = self.check_login()
             if t == 200:
                 self.get_login_info()
+                self.web_wx_init()
                 break
             elif t == 201:
                 print("扫描成功，请在手机上确认登录!")
             elif t == 400:
                 raise Exception("未知错误!")
-
 
     def get_qr_uuid(self):
         """
@@ -86,7 +87,7 @@ class Login:
             regex = r'window.redirect_uri="(.*?)"'
             data = re.search(regex, r.text)
             if data and data.group(1):
-                self.redirect_uri = data.group(1)
+                self.login_info['url'] = data.group(1)
                 return 200
             else:
                 return 400
@@ -96,8 +97,36 @@ class Login:
             return 400
 
     def get_login_info(self):
-        url = self.redirect_uri
-        r = self.session.get(url,)
-        r = ps(r.text)
-        r = r.documentElement
-        print(r)
+        """
+        获取 登录信息
+        :return:
+        """
+        url = self.login_info['url']
+        headers = {'User-Agent': config.USER_AGENT}
+        r = self.session.get(url, headers=headers, allow_redirects=False)
+        nodes = dom.parseString(r.text).documentElement.childNodes
+        self.login_info['BaseRequest'] = {}
+        for node in nodes:
+            if node.nodeName == "skey":
+                self.login_info['skey'] = self.login_info['BaseRequest']['Skey'] = node.childNodes[0].data
+            elif node.nodeName == 'wxsid':
+                self.login_info['wxsid'] = self.login_info['BaseRequest']['Sid'] = node.childNodes[0].data
+            elif node.nodeName == 'wxuin':
+                self.login_info['wxuin'] = self.login_info['BaseRequest']['Uin'] = node.childNodes[0].data
+            elif node.nodeName == 'pass_ticket':
+                self.login_info['pass_ticket'] = self.login_info['BaseRequest']['DeviceID'] = node.childNodes[0].data
+
+    def web_wx_init(self):
+        """
+        self.login_info['url'] = self.login_info['url'][:self.login_info['url'].rfind('/')]
+        url = '%s/webwxinit?r=%s' % (self.login_info['url'], int(time.time()))
+        print(url)
+        """
+        url = '%s?r=%s' % (config.API_web_init, int(time.time()))
+        print(url)
+        data = {'BaseRequest': self.login_info['BaseRequest']}
+        headers = {
+            'User-Agent': config.USER_AGENT,
+            'ContentType': "application/json; charset=utf-8"}
+        r = self.session.post(url, data=json.dumps(data), headers=headers)
+        print(json.loads(r.content.decode('utf-8', 'replace')))
