@@ -1,14 +1,16 @@
 import json
 import os
+import re
 from collections import Counter
 
 from math import log
 
+from pywork import core
 from pywork.config import *
 from pywork.untils import get_file_names
 
 
-class BuildIndex:
+class ReverseIndex:
     """
     构造倒排索引字典,最后保存为 json
     或从文件中加载 json 类型的倒排索引
@@ -25,10 +27,16 @@ class BuildIndex:
         ]
     }
     """
+
     def __init__(self):
         self.split_dictionary = set()
         self.stop_set = set()
         self.index = {}
+
+        # 加载分词字典和停用词表
+        self.load_stop_words()
+        self.load_split_dictionary()
+        # 建立或加载倒排索引
         if not os.path.exists(build_index_file):
             print("没有建立过倒排索引!")
             print("正在建立倒排索引...")
@@ -49,9 +57,6 @@ class BuildIndex:
         建立倒排索引
         :return:
         """
-        # 加载分词字典和停用词表
-        self.load_stop_words()
-        self.load_split_dictionary()
         # 获取所有 root_dir 文件夹下的文件
         files = get_file_names(root_dir)
         file_count = len(files)
@@ -61,8 +66,6 @@ class BuildIndex:
             string = open(file, "r", encoding="UTF-8").read()
             # 进行分词
             words = self.bmm_seg(string)
-            # 去停用词
-            words = self.delete_stop_word(words)
             # 计算单词在该文档中的词频 TF
             term_frequency = Counter(words)
             for word in term_frequency:
@@ -77,7 +80,7 @@ class BuildIndex:
         for word in self.index:
             if word != 'num':
                 l = self.index[word]
-                idf = log(file_count/(len(l)))
+                idf = log(file_count / (len(l)))
                 self.index[word]['IDF'] = round(idf, 5)
 
     def bmm_seg(self, sentence):
@@ -88,6 +91,9 @@ class BuildIndex:
         """
         max_len = 5  # 最长词的长度
         result = []
+        # 清除所有空白字符
+        p = re.compile('\s+')
+        sentence = re.sub(p, '', sentence)
         end = len(sentence)
         while end > 0:
             start = max(end - max_len, 0)
@@ -100,6 +106,9 @@ class BuildIndex:
                 else:
                     start += 1
         result.reverse()
+        # 去停用词
+        result = self.delete_stop_word(result)
+
         return result
 
     def delete_stop_word(self, word_list):
@@ -108,12 +117,12 @@ class BuildIndex:
         :param word_list: 分词完成的列表
         :return: 消除停用词和空白字符的分词列表
         """
+        new_list = []
         for l in word_list:
-            if l in self.stop_set:
-                word_list.remove(l)
-            if l == "\u3000" or l == " " or l == "\n":
-                word_list.remove(l)
-        return word_list
+            if l not in self.stop_set:
+                new_list.append(l)
+
+        return new_list
 
     def load_stop_words(self):
         """
@@ -141,3 +150,56 @@ class BuildIndex:
             self.split_dictionary.add(w)
         print("加载分词字典完成!")
 
+
+def search_or(word1, word2):
+    """
+    检索包含 word1 或 word2 的文章
+    :param word1:
+    :param word2:
+    :return: 文章文件名集合
+    """
+    r = set(core.index.get(word1)) | set(core.index.get(word2))
+    if "IDF" in r:
+        r.remove("IDF")
+    return r
+
+
+def search_and(word1, word2):
+    """
+    检索同时包含 word1 和 word2 的文章
+    :param word1:
+    :param word2:
+    :return: 文章文件名集合
+    """
+    r = set(core.index.get(word1)) & set(core.index.get(word2))
+    if "IDF" in r:
+        r.remove("IDF")
+    return r
+
+
+def search_not(word1, word2):
+    """
+    检索包含 word1 不包含 word2 的文章
+    :param word1:
+    :param word2:
+    :return: 文章文件名集合
+    """
+    r = set(core.index.get(word1)) - set(core.index.get(word2))
+    if "IDF" in r:
+        r.remove("IDF")
+    return r
+
+
+def word_weight(reverse, file_name):
+    """
+    计算某文件总分词的权重 使用 TF-IDF 方法
+    :param reverse: ReverseIndex 对象
+    :param file_name:
+    :return:
+    """
+    index = reverse.index
+    content = open(file_name, 'r').read()
+    dictionary = reverse.bmm_seg(content)
+    dictionary = Counter(dictionary)
+    for word in dictionary:
+        print(word, index[word][file_name]*index[word]['IDF'])

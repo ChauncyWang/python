@@ -6,6 +6,7 @@ from wechat.oa.handle import Handle
 
 urls = (
     '/', 'Handle'
+    '/index.html', 'Handle'
 )
 app = web.application(urls, globals())
 

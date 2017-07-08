@@ -10,12 +10,17 @@ render = web.template.render("/home/wx/wechat/oa/templates/")
 
 class Handle:
     def GET(self, name=None):
-        try:
-            web_input = web.input()
-            return validate_token(web_input)
-        except Exception as Argument:
-            print(Argument)
-            return Argument
+        print(name)
+        if name is None:
+            try:
+                web_input = web.input()
+                return validate_token(web_input)
+            except Exception as Argument:
+                print(Argument)
+                return Argument
+        else:
+            print(name)
+            web.redirect("/static/%s" % name)
 
     def POST(self):
         try:
